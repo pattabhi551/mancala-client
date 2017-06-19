@@ -1,0 +1,176 @@
+<link rel="import" href="../../bower_components/polymer/polymer-element.html">
+<link rel="import" href="../../bower_components/polymer/lib/mixins/gesture-event-listeners.html">
+<link rel="import" href="../../bower_components/polymer/lib/elements/dom-repeat.html">
+
+<dom-module id="mancala-client-app">
+  <template>
+    <style>
+      :host {
+        display: block;
+      }
+
+      .flex-container {
+        padding: 0;
+        margin: 0;
+        list-style: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      td {
+        font-weight: bold;
+        text-align: center;
+      }
+
+      /*table {
+        width: 60%;
+      }*/
+    </style>
+    <h2 class="flex-container" style="margin-bottom: 40px;">Welcome to the Mancala App !!</h2><br>
+
+    <h3 class="flex-container"> &lt; --- Play this side [[stones.player1Name]]  </h3><br>
+    <div class="flex-container">
+      <table border="2" style="width: 60vw; height: 40vh">
+        <tr>
+          <td id="7" rowspan="2" disabled>Big pit <br/> [[stones.player1Name]] - [[stones.player1Pit]]</td>
+          <template is="dom-repeat" items="[[stones.player1]]">
+            <td id="[[getColumnIndex(index)]]" disabled$="[[item]]" on-tap="handleStones">Col [[getColumnIndex(index)]] -- [[item]]</td>
+          </template>
+          <td id="14" rowspan="2" disabled>Big pit <br/> [[stones.player2Name]] - [[stones.player2Pit]]</td>
+        </tr>
+        <tr>
+          <template is="dom-repeat" items="[[stones.player2]]">
+            <td id="[[getColumnIndexP2(index)]]" on-tap="handleStones">Col [[getColumnIndexP2(index)]] -- [[item]]</td>
+          </template>
+        </tr>
+      </table>
+    </div>
+    <br/><h3 class="flex-container"> Play this side [[stones.player2Name]] --- &gt; </h3>
+  </template>
+
+  <script>
+    /**
+     * @customElement
+     * @polymer
+     */
+    class MancalaClientApp extends Polymer.GestureEventListeners(Polymer.Element) {
+      static get is() { return 'mancala-client-app'; }
+
+      connectedCallback() {
+
+        fetch('http://localhost:8080/').then(function(data) {
+          data.json().then(function(json){
+            this._updateData(json);
+          }.bind(this)).
+          catch(function(error) {
+            console.log('json parse error', error);
+          });
+        }.bind(this)).catch(function(error) {
+          console.log('data fetch error', error);
+        });
+
+        super.connectedCallback();
+
+      }
+
+      static get properties() {
+        return {
+          prop1: {
+            type: String,
+            value: 'mancala-client-app'
+          },
+
+          player1Stones: {
+            type: Array,
+            value: function() {
+              return [6,6,6,6,6,6];
+            }
+          },
+          stones: {
+            type: Object,
+            value: function() {
+              return {
+                player1Name: 'Player1',
+                player2Name: 'Player2',
+                player1: [0,0,0,0,0,0],
+                player2: [0,0,0,0,0,0],
+                player1Pit: 0,
+                player2Pit: 0
+              };
+            },
+            notify: true
+          },
+          holes: {
+            type: Number,
+            value: 6
+          },
+          NoOfStones: {
+            type: Number,
+            value: 6
+          }
+        };
+      }
+
+      handleStones(e) {
+        console.log('target', e.target.id);
+
+        let index = e.target.id;
+        let player = 'p1';
+
+        if(index >= 7) {
+          player = 'p2';
+          index = index % 7;
+        }
+
+        let request = new Request('http://localhost:8080/', {
+          method: 'POST',
+          mode: 'cors',
+          body: JSON.stringify({
+            player: player,
+            index: index-1
+          }),
+          headers: new Headers({
+            'Content-Type': 'application/json'
+          })
+        });
+
+        fetch(request).then(function(data) {
+          data.json().then(function(json){
+            this._updateData(json);
+          }.bind(this)).
+          catch(function(error) {
+            console.log('json parse error', error);
+          });
+        }.bind(this)).catch(function(error) {
+          console.log('data fetch error', error);
+        });
+      }
+
+      getColumnIndex(index) {
+        return this.holes - index;
+      }
+
+      _updateData(json) {
+
+        this.set('stones.player1', json.player1.scores.reverse());
+        this.set('stones.player2', json.player2.scores);
+        this.set('stones.player1Name', json.player1.name);
+        this.set('stones.player2Name', json.player2.name);
+        this.set('stones.player1Pit', json.player1.pitScore);
+        this.set('stones.player2Pit', json.player2.pitScore);
+
+        if(json.lastMove) {
+          alert('Game Ended already');
+        }
+      }
+
+      getColumnIndexP2(index) {
+        return 8 + index;
+      }
+
+    }
+
+    customElements.define(MancalaClientApp.is, MancalaClientApp);
+  </script>
+</dom-module>

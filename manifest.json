@@ -1,0 +1,7 @@
+{
+  "name": "mancala-client",
+  "short_name": "mancala-client",
+  "description": "A web version of mancala",
+  "start_url": "/",
+  "display": "standalone"
+}
